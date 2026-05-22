@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FakeRadar — News Truth Detector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red:    #FF2D2D;
+      --green:  #00A651;
+      --yellow: #FFB800;
+      --blue:   #0057FF;
+      --black:  #111111;
+      --white:  #FFFFFF;
+      --card:   #FFFFFF;
+      --border: #E5E5E5;
+    }
+
+    body {
+      background: radial-gradient(ellipse at center, #FFD000 0%, #FF8C00 100%);
+      color: var(--black);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,87,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,87,255,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    /* Header */
+    header { margin-bottom: 48px; }
+    .logo-row { display: flex; align-items: center; gap: 16px; margin-bottom: 6px; }
+    .logo-icon {
+      width: 52px; height: 52px;
+      background: var(--yellow);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
+      box-shadow: 4px 4px 0 var(--blue);
+      flex-shrink: 0;
+    }
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(42px, 8vw, 72px);
+      letter-spacing: 2px;
+      line-height: 1;
+      color: #0057FF;
+      -webkit-text-fill-color: #0057FF;
+    }
+    .tagline { font-size: 14px; color: #CC0000; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px; font-weight: 700; }
+    .tagline span { color: #CC0000; }
+    .input-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #AAA; margin-bottom: 12px; }
+    .loading { display: none; align-items: center; gap: 10px; padding: 16px 0; color: #AAA; font-size: 13px; }
+    .result-sub { font-size: 13px; color: #888; margin-top: 2px; }
+    .conf-label-row { display: flex; justify-content: space-between; font-size: 12px; color: #AAA; margin-bottom: 8px; }
+    .conf-bar { height: 8px; background: #EEE; border-radius: 99px; overflow: hidden; }
+    .history-title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 1.5px; color: #000000; font-weight: 900; }
+    .btn-clear-history { font-size: 12px; color: #BBB; background: none; border: none; cursor: pointer; text-decoration: underline; transition: color 0.15s; }
+    .btn-clear-history:hover { color: #888; }
+    .history-empty { text-align: center; padding: 40px 20px; color: #CCC; font-size: 13px; border: 1.5px dashed #DDD; border-radius: 12px; }
+    .history-text { flex: 1; font-size: 13px; color: #AAA; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .history-time { font-size: 11px; color: #CCC; flex-shrink: 0; }
+    .btn-clear { padding: 14px 20px; background: transparent; color: #BBB; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+    .btn-clear:hover { border-color: #CCC; color: #888; }
+
+    /* Input card */
+    .input-card {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .input-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--yellow), var(--red), var(--blue));
+    }
+    .input-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #555;
+      margin-bottom: 12px;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      background: #F8F9FC;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--black);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      line-height: 1.7;
+      padding: 14px 16px;
+      resize: vertical;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    textarea:focus { border-color: var(--yellow); }
+    textarea::placeholder { color: #AAA; }
+
+    .btn-row { display: flex; gap: 12px; margin-top: 16px; align-items: center; }
+    .btn-check {
+      flex: 1;
+      padding: 14px 28px;
+      background: var(--yellow);
+      color: var(--black);
+      border: none;
+      border-radius: 10px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+      box-shadow: 3px 3px 0 var(--blue);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-check:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--blue); }
+    .btn-check:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--blue); }
+    .btn-check:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-clear {
+      padding: 14px 20px;
+      background: transparent;
+      color: #444;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-clear:hover { border-color: #444; color: #888; }
+
+    /* Loading */
+    .loading { display: none; align-items: center; gap: 10px; padding: 16px 0; color: #555; font-size: 13px; }
+    .loading.show { display: flex; }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid #222;
+      border-top-color: var(--yellow);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Result */
+    .result-card {
+      display: none;
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+      animation: slideUp 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .result-card.show { display: block; }
+    .result-card.fake {
+      background: rgba(255,45,45,0.08);
+      border: 1.5px solid var(--red);
+    }
+    .result-card.real {
+      background: rgba(0,212,106,0.08);
+      border: 1.5px solid var(--green);
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-top { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .result-icon { font-size: 42px; line-height: 1; }
+    .result-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 40px;
+      letter-spacing: 2px;
+      line-height: 1;
+    }
+    .result-card.fake .result-label { color: var(--red); }
+    .result-card.real .result-label { color: var(--green); }
+    .result-sub { font-size: 13px; color: #555; margin-top: 2px; }
+
+    /* Confidence bar */
+    .conf-section { margin-top: 4px; }
+    .conf-label-row { display: flex; justify-content: space-between; font-size: 12px; color: #555; margin-bottom: 8px; }
+    .conf-label-row span:last-child { font-weight: 700; }
+    .result-card.fake .conf-label-row span:last-child { color: var(--red); }
+    .result-card.real .conf-label-row span:last-child { color: var(--green); }
+    .conf-bar { height: 8px; background: #1A1A1A; border-radius: 99px; overflow: hidden; }
+    .conf-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 0%;
+    }
+    .result-card.fake .conf-fill { background: linear-gradient(90deg, #FF2D2D, #FF6B6B); }
+    .result-card.real .conf-fill { background: linear-gradient(90deg, #00D46A, #00FFB3); }
+
+    /* History */
+    .history-section { margin-top: 40px; }
+    .history-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
+    }
+    .history-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 1.5px;
+      color: var(--white);
+    }
+    .history-count {
+      background: var(--blue);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 99px;
+      letter-spacing: 0.05em;
+    }
+    .btn-clear-history {
+      font-size: 12px;
+      color: #333;
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: underline;
+      transition: color 0.15s;
+    }
+    .btn-clear-history:hover { color: #666; }
+
+    .history-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: #2A2A2A;
+      font-size: 13px;
+      border: 1.5px dashed #1A1A1A;
+      border-radius: 12px;
+    }
+    .history-empty .empty-icon { font-size: 32px; margin-bottom: 10px; opacity: 0.4; }
+
+    .history-list { display: flex; flex-direction: column; gap: 10px; }
+    .history-item {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex; align-items: center; gap: 16px;
+      animation: slideUp 0.2s ease;
+      transition: border-color 0.15s;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+    }
+    .history-item:hover { border-color: #CCC; }
+    .history-item.fake { border-left: 3px solid var(--red); }
+    .history-item.real { border-left: 3px solid var(--green); }
+    .history-badge {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 15px;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+    .history-item.fake .history-badge { background: rgba(255,45,45,0.15); color: var(--red); }
+    .history-item.real .history-badge { background: rgba(0,212,106,0.15); color: var(--green); }
+    .history-text {
+      flex: 1;
+      font-size: 13px;
+      color: #666;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .history-conf {
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .history-item.fake .history-conf { color: var(--red); }
+    .history-item.real .history-conf { color: var(--green); }
+    .history-time { font-size: 11px; color: #333; flex-shrink: 0; }
+
+    /* How It Works */
+    .how-section { margin-bottom: 40px; }
+    .how-title { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 1.5px; color: var(--black); margin-bottom: 16px; }
+    .how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+    @media (max-width: 600px) { .how-grid { grid-template-columns: 1fr; } }
+    .how-card { background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    .how-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 14px; }
+    .how-card-title { font-size: 15px; font-weight: 700; color: var(--black); margin-bottom: 8px; }
+    .how-card-desc { font-size: 13px; color: #888; line-height: 1.6; }
+    .demo-notice { background: #F8F9FC; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 18px; display: flex; gap: 12px; align-items: flex-start; font-size: 13px; color: #777; line-height: 1.6; }
+    .demo-notice strong { color: var(--black); }
+    .demo-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    /* History button */
+    .btn-history { padding: 14px 20px; background: var(--blue); color: #fff; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .btn-history:hover { opacity: 0.88; }
+
+    /* Footer */
+    .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 60px; padding-top: 28px; border-top: 1.5px solid var(--border); }
+    .footer-brand { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 2px; color: var(--black); line-height: 1; font-style: italic; }
+    .footer-sub { font-size: 13px; color: #333; margin-top: 2px; font-weight: 600; }
+    .footer-right { text-align: right; }
+    .footer-label { font-size: 13px; color: #333; font-style: italic; margin-bottom: 2px; font-weight: 600; }
+    .footer-team { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2px; color: var(--black); font-style: italic; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: color 0.15s; user-select: none; }
+    .footer-team:hover { color: var(--blue); }
+    .team-arrow { font-size: 13px; transition: transform 0.25s; display: inline-block; }
+    .team-arrow.open { transform: rotate(90deg); }
+
+    /* Team panel */
+    .team-panel { display: none; background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 20px 24px; margin-top: 12px; text-align: right; box-shadow: 0 4px 20px rgba(0,0,0,0.07); animation: slideUp 0.2s ease; }
+    .team-panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #AAA; margin-bottom: 12px; }
+    .team-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .team-list li { font-size: 15px; color: var(--black); font-weight: 500; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .team-list li:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="logo-row">
+      <div class="logo-icon">📡</div>
+      <h1>FakeRadar</h1>
+    </div>
+    <p class="tagline">AI-Powered Fake News Detector · <span>98.55% Accuracy</span></p>
+  </header>
+
+  <!-- How It Works -->
+  <div class="how-section">
+    <div class="how-title">How It Works</div>
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="how-icon" style="background:rgba(255,45,45,0.12)">📋</div>
+        <div class="how-card-title">1. Paste Content</div>
+        <div class="how-card-desc">Drop in any headline, article excerpt, or social media post you want to verify.</div>
+      </div>
+      <div class="how-card">
+        <div class="how-icon" style="background:rgba(255,45,45,0.12)">🤖</div>
+        <div class="how-card-title">2. AI Analysis</div>
+        <div class="how-card-desc">Our engine checks for sensationalism, source reliability, logical fallacies, and more.</div>
+      </div>
+      <div class="how-card">
+        <div class="how-icon" style="background:rgba(255,45,45,0.12)">✅</div>
+        <div class="how-card-title">3. Get Verdict</div>
+        <div class="how-card-desc">Receive a credibility score with detailed breakdown of red flags found.</div>
+      </div>
+    </div>
+    <div class="demo-notice">
+      <span class="demo-icon">ℹ️</span>
+      <div><strong>Demo Notice:</strong> This is a simulated analysis tool for demonstration purposes. It uses pattern-based heuristics, not real AI. Always verify news through multiple trusted sources.</div>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-card">
+    <div class="input-label">Paste news article text below</div>
+    <textarea id="newsText" placeholder="Paste any news article here and hit ANALYZE to check if it's real or fake..."></textarea>
+    <div class="btn-row">
+      <button class="btn-check" id="checkBtn" onclick="checkNews()">⚡ Analyze Article</button>
+      <button class="btn-history" onclick="scrollToHistory()">🕓 History</button>
+      <button class="btn-clear" onclick="clearInput()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <span id="loadingText">Analyzing article with AI model...</span>
+  </div>
+
+  <!-- Result -->
+  <div class="result-card" id="resultCard">
+    <div class="result-top">
+      <div class="result-icon" id="resultIcon"></div>
+      <div>
+        <div class="result-label" id="resultLabel"></div>
+        <div class="result-sub" id="resultSub"></div>
+      </div>
+    </div>
+    <div class="conf-section">
+      <div class="conf-label-row">
+        <span>Confidence Score</span>
+        <span id="confValue"></span>
+      </div>
+      <div class="conf-bar"><div class="conf-fill" id="confFill"></div></div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="history-section" id="historySection" style="display:none">
+    <div class="history-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="history-title">History</div>
+        <div class="history-count" id="historyCount">0</div>
+      </div>
+      <button class="btn-clear-history" onclick="clearHistory()">Clear all</button>
+    </div>
+    <div id="historyList">
+      <div class="history-empty">
+        <div class="empty-icon">🗂️</div>
+        No articles checked yet. Paste a news article above to get started.
+      </div>
+    </div>
+  </div>
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-left">
+      <div class="footer-brand">Abacus</div>
+      <div class="footer-sub">Project group</div>
+    </div>
+    <div class="footer-right">
+      <div class="footer-label">Designed by</div>
+      <div class="footer-team" onclick="toggleTeam()">Byte Brains <span class="team-arrow" id="teamArrow">▶</span></div>
+    </div>
+  </div>
+
+  <!-- Team panel -->
+  <div class="team-panel" id="teamPanel">
+    <div class="team-panel-title">Team Members</div>
+    <ul class="team-list">
+      <li>Phagu Snigdha</li>
+      <li>Gaytree</li>
+      <li>Gourob</li>
+      <li>Jhansi</li>
+      <li>Somnath</li>
+      <li>Debasmita</li>
+      <li>Shubhankar</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+  // ← PASTE YOUR NGROK URL HERE
+  const API_URL = 'https://sincere-skinless-qualifier.ngrok-free.dev';
+
+  let history  = [];
+  let pollTimer = null;
+
+  function toggleTeam() {
+    const panel = document.getElementById('teamPanel');
+    const arrow = document.getElementById('teamArrow');
+    const isOpen = panel.style.display === 'block';
+    panel.style.display = isOpen ? 'none' : 'block';
+    arrow.classList.toggle('open', !isOpen);
+  }
+
+  async function checkNews() {
+    const text = document.getElementById('newsText').value.trim();
+    if (!text) { alert('Please paste some news text first!'); return; }
+
+    const btn     = document.getElementById('checkBtn');
+    const loading = document.getElementById('loading');
+    const resultCard = document.getElementById('resultCard');
+
+    btn.disabled = true;
+    loading.classList.add('show');
+    document.getElementById('loadingText').textContent = 'Submitting article...';
+    resultCard.classList.remove('show');
+
+    try {
+      // Submit to backend
+      const res    = await fetch(API_URL + '/submit', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+        body:    JSON.stringify({ text })
+      });
+      const data   = await res.json();
+      const req_id = data.id;
+
+      // Start polling for result
+      document.getElementById('loadingText').textContent = 'Waiting for review...';
+      pollTimer = setInterval(async () => {
+        const r    = await fetch(API_URL + '/result/' + req_id, {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
+        const result = await r.json();
+        if (result.status === 'done') {
+          clearInterval(pollTimer);
+          btn.disabled = false;
+          loading.classList.remove('show');
+          showResult(result, text);
+          addToHistory(result, text);
+        }
+      }, 2000);
+
+    } catch (err) {
+      btn.disabled = false;
+      loading.classList.remove('show');
+      alert('Could not reach the API. Make sure your Flask server is running!');
+    }
+  }
+
+  window.onload = function() {}
+
+  function showResult(data, text) {
+    const card   = document.getElementById('resultCard');
+    const icon   = document.getElementById('resultIcon');
+    const label  = document.getElementById('resultLabel');
+    const sub    = document.getElementById('resultSub');
+    const conf   = document.getElementById('confValue');
+    const fill   = document.getElementById('confFill');
+
+    card.className = 'result-card show ' + (data.is_fake ? 'fake' : 'real');
+    icon.textContent  = data.is_fake ? '🔴' : '🟢';
+    label.textContent = data.is_fake ? 'FAKE NEWS' : 'REAL NEWS';
+    sub.textContent   = data.is_fake
+      ? 'This article shows signs of misinformation.'
+      : 'This article appears to be credible news.';
+    conf.textContent  = data.confidence + '%';
+
+    setTimeout(() => { fill.style.width = data.confidence + '%'; }, 100);
+  }
+
+  function addToHistory(data, text) {
+    const now = new Date();
+    const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    history.unshift({ data, text, time });
+    document.getElementById('historyCount').textContent = history.length;
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('historyList');
+    if (history.length === 0) {
+      list.innerHTML = `<div class="history-empty"><div class="empty-icon">🗂️</div>No articles checked yet.</div>`;
+      return;
+    }
+    list.innerHTML = history.map(item => `
+      <div class="history-item ${item.data.is_fake ? 'fake' : 'real'}">
+        <div class="history-badge">${item.data.is_fake ? 'FAKE' : 'REAL'}</div>
+        <div class="history-text">${item.text.substring(0, 80)}...</div>
+        <div class="history-conf">${item.data.confidence}%</div>
+        <div class="history-time">${item.time}</div>
+      </div>`).join('');
+  }
+
+  function scrollToHistory() {
+    const section = document.getElementById('historySection');
+    const btn = document.querySelector('.btn-history');
+    if (section.style.display === 'none') {
+      section.style.display = 'block';
+      btn.textContent = '🕓 Hide History';
+      section.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      section.style.display = 'none';
+      btn.textContent = '🕓 History';
+    }
+  }
+
+  function clearInput() {
+    document.getElementById('newsText').value = '';
+    document.getElementById('resultCard').classList.remove('show');
+    document.getElementById('confFill').style.width = '0%';
+  }
+
+  function clearHistory() {
+    history = [];
+    document.getElementById('historyCount').textContent = 0;
+    renderHistory();
+  }
+</script>
+</body>
+</html>
